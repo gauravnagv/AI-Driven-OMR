@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AI-Driven OMR Scanner</title>
+  <style>
+    :root { color-scheme: dark; }
+    body { font-family: Arial, sans-serif; margin: 0; background: #10131a; color: #e8ebf1; }
+    .container { max-width: 1100px; margin: 0 auto; padding: 24px; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .card { background: #171b24; border: 1px solid #2a3140; border-radius: 10px; padding: 16px; }
+    h1 { margin: 0 0 14px 0; font-size: 1.5rem; }
+    h2 { margin: 0 0 12px 0; font-size: 1.1rem; }
+    video, canvas, img { width: 100%; border-radius: 8px; border: 1px solid #3b4459; }
+    .controls { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+    button, input[type="file"], input[type="text"], textarea {
+      border-radius: 8px; border: 1px solid #3b4459; background: #121722; color: #e8ebf1; padding: 8px 10px;
+    }
+    button { cursor: pointer; background: #276ef1; border-color: #276ef1; }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+    label { display: block; margin-top: 8px; margin-bottom: 4px; font-size: 0.9rem; color: #9fb0d2; }
+    pre { background: #0f141d; border: 1px solid #30384a; border-radius: 8px; padding: 12px; overflow: auto; max-height: 350px; }
+    .pill { display: inline-block; padding: 4px 8px; border-radius: 999px; background: #1f2a42; color: #b8c9ea; font-size: 0.8rem; }
+    @media (max-width: 900px) { .row { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>AI-Driven OMR Web Scanner</h1>
+    <div class="pill">Live Camera + Upload + AI OMR Scan</div>
+    <div class="row" style="margin-top:14px;">
+      <section class="card">
+        <h2>Camera Capture</h2>
+        <video id="camera" autoplay playsinline muted></video>
+        <canvas id="snapshot" style="display:none;"></canvas>
+        <div class="controls">
+          <button id="startCamera">Start Camera</button>
+          <button id="capture">Capture & Scan</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Upload Image</h2>
+        <input id="uploadInput" type="file" accept="image/*" />
+        <div style="margin-top:10px;">
+          <img id="preview" alt="Uploaded preview" style="display:none;" />
+        </div>
+        <div class="controls">
+          <button id="scanUpload">Scan Uploaded Image</button>
+        </div>
+      </section>
+    </div>
+
+    <section class="card" style="margin-top:20px;">
+      <h2>Scan Settings</h2>
+      <label for="templatePath">Template Path</label>
+      <input id="templatePath" type="text" value="config/template.example.yaml" style="width:100%;" />
+      <label for="answerKey">Answer Key JSON (optional)</label>
+      <textarea id="answerKey" rows="4" style="width:100%;">{"q1":"A","q2":"C"}</textarea>
+    </section>
+
+    <section class="card" style="margin-top:20px;">
+      <h2>Result</h2>
+      <pre id="result">Waiting for scan...</pre>
+    </section>
+  </div>
+
+  <script>
+    const cameraEl = document.getElementById("camera");
+    const canvasEl = document.getElementById("snapshot");
+    const previewEl = document.getElementById("preview");
+    const resultEl = document.getElementById("result");
+    const uploadInput = document.getElementById("uploadInput");
+    const templatePathEl = document.getElementById("templatePath");
+    const answerKeyEl = document.getElementById("answerKey");
+    let mediaStream = null;
+
+    function setResult(obj) {
+      resultEl.textContent = typeof obj === "string" ? obj : JSON.stringify(obj, null, 2);
+    }
+
+    async function postImageBlob(blob, filename) {
+      const body = new FormData();
+      body.append("image", blob, filename);
+      body.append("template_path", templatePathEl.value.trim() || "config/template.example.yaml");
+      body.append("answer_key_json", answerKeyEl.value.trim() || "{}");
+      body.append("save_artifacts", "true");
+
+      const response = await fetch("/scan/sync", { method: "POST", body });
+      const payload = await response.json();
+      if (!response.ok) {
+        setResult(payload);
+        return;
+      }
+      setResult(payload);
+    }
+
+    document.getElementById("startCamera").addEventListener("click", async () => {
+      try {
+        mediaStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
+        cameraEl.srcObject = mediaStream;
+      } catch (error) {
+        setResult("Camera access failed: " + error.message);
+      }
+    });
+
+    document.getElementById("capture").addEventListener("click", async () => {
+      if (!mediaStream) {
+        setResult("Start camera first.");
+        return;
+      }
+      canvasEl.width = cameraEl.videoWidth || 1280;
+      canvasEl.height = cameraEl.videoHeight || 720;
+      const ctx = canvasEl.getContext("2d");
+      ctx.drawImage(cameraEl, 0, 0, canvasEl.width, canvasEl.height);
+      canvasEl.toBlob(async (blob) => {
+        if (!blob) {
+          setResult("Failed to capture frame.");
+          return;
+        }
+        setResult("Scanning camera capture...");
+        await postImageBlob(blob, "camera-capture.jpg");
+      }, "image/jpeg", 0.95);
+    });
+
+    uploadInput.addEventListener("change", () => {
+      const file = uploadInput.files?.[0];
+      if (!file) {
+        return;
+      }
+      previewEl.src = URL.createObjectURL(file);
+      previewEl.style.display = "block";
+    });
+
+    document.getElementById("scanUpload").addEventListener("click", async () => {
+      const file = uploadInput.files?.[0];
+      if (!file) {
+        setResult("Choose an image file first.");
+        return;
+      }
+      setResult("Scanning uploaded image...");
+      await postImageBlob(file, file.name);
+    });
+  </script>
+</body>
+</html>
+

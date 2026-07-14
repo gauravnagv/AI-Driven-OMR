@@ -1,5 +1,23 @@
 # API Usage Examples
 
+## Web UI
+
+- Open: `http://localhost:8000/`
+- Features:
+  - Live camera capture via browser camera access
+  - Image upload scanning
+  - AI pipeline invocation through `/scan/sync`
+
+## Sync Scan Endpoint (for UI/camera)
+
+```bash
+curl -X POST http://localhost:8000/scan/sync \
+  -F "image=@./samples/sheet1.png" \
+  -F "template_path=./config/template.example.yaml" \
+  -F 'answer_key_json={"q1":"A","q2":"C"}' \
+  -F "save_artifacts=true"
+```
+
 ## Create Job
 
 ```bash
@@ -24,4 +42,3 @@ curl http://localhost:8000/jobs/<job_id>
 ```bash
 curl http://localhost:8000/jobs/<job_id>/results
 ```
-

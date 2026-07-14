@@ -4,7 +4,7 @@ End-to-end document processing system for large-scale exam digitization with:
 - **Page/document detection** (YOLOv8 if weights are provided, robust OpenCV fallback otherwise)
 - **Geometric correction + de-warping** (perspective rectification + curvature flattening pass)
 - **OMR extraction + scoring**
-- **Batch execution**, **API**, and **queue/worker split** for scalable deployment
+- **Web UI + camera capture**, **API**, and **queue/worker split** for scalable deployment
 
 ## Quick Start
 
@@ -17,6 +17,11 @@ pip install -e .[dev]
 Start API:
 ```bash
 omr-system serve-api --host 0.0.0.0 --port 8000
+```
+
+Open web UI:
+```text
+http://localhost:8000/
 ```
 
 Start worker:
@@ -41,4 +46,3 @@ curl -X POST http://localhost:8000/jobs \
 - Deployment: `docs/deployment.md`
 - API usage: `docs/api.md`
 - Model artifact wiring: `docs/models.md`
-
