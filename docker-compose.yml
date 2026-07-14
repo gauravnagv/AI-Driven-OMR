@@ -1,0 +1,34 @@
+services:
+  api:
+    build: .
+    command: ["/app/scripts/start-api.sh"]
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./runtime:/app/runtime
+      - ./config:/app/config:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  worker:
+    build: .
+    command: ["/app/scripts/start-worker.sh"]
+    env_file:
+      - .env
+    volumes:
+      - ./runtime:/app/runtime
+      - ./config:/app/config:ro
+    healthcheck:
+      test: ["CMD", "/app/scripts/worker-healthcheck.sh"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    depends_on:
+      api:
+        condition: service_healthy
+

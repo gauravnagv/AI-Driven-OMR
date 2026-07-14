@@ -1,0 +1,21 @@
+page_width: 1800
+page_height: 2400
+fill_threshold: 0.45
+questions:
+  - question_id: q1
+    marks: 1
+    negative_marks: 0.25
+    choices:
+      - { label: A, x: 300, y: 450, radius: 24 }
+      - { label: B, x: 400, y: 450, radius: 24 }
+      - { label: C, x: 500, y: 450, radius: 24 }
+      - { label: D, x: 600, y: 450, radius: 24 }
+  - question_id: q2
+    marks: 1
+    negative_marks: 0.25
+    choices:
+      - { label: A, x: 300, y: 520, radius: 24 }
+      - { label: B, x: 400, y: 520, radius: 24 }
+      - { label: C, x: 500, y: 520, radius: 24 }
+      - { label: D, x: 600, y: 520, radius: 24 }
+
