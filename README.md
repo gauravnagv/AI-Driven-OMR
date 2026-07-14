@@ -3,8 +3,10 @@
 End-to-end document processing system for large-scale exam digitization with:
 - **Page/document detection** (YOLOv8 if weights are provided, robust OpenCV fallback otherwise)
 - **Geometric correction + de-warping** (perspective rectification + curvature flattening pass)
-- **OMR extraction + scoring**
+- **OMR extraction + section-wise scoring**
 - **Web UI + camera capture**, **API**, and **queue/worker split** for scalable deployment
+- **Step-by-step explainable scan output** (sheet presence, detection, dewarp, extraction, scoring)
+- **AI scan quality metrics** (estimated accuracy %, detection confidence, confidence guidance)
 
 ## Quick Start
 

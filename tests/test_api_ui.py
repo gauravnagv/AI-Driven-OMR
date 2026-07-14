@@ -64,3 +64,22 @@ def test_web_ui_and_sync_scan(tmp_path: Path) -> None:
     assert payload["success"] is True
     assert payload["omr"] is not None
     assert payload["omr"]["responses"][0]["question_id"] == "q1"
+    assert "processing_steps" in payload
+    assert payload["omr"]["quality"]["estimated_accuracy_percent"] > 0
+
+
+def test_presence_detection_rejects_blank_frame(tmp_path: Path) -> None:
+    blank_path = tmp_path / "blank.jpg"
+    blank = np.full((700, 700, 3), 255, dtype=np.uint8)
+    cv2.imwrite(str(blank_path), blank)
+
+    client = TestClient(app)
+    with blank_path.open("rb") as image_stream:
+        response = client.post(
+            "/detect/presence",
+            files={"image": ("blank.jpg", image_stream, "image/jpeg")},
+        )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["present"] is False

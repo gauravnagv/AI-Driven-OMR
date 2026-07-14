@@ -42,7 +42,7 @@ class PageDetector:
             logger.warning("YOLOv8 unavailable. Falling back to contour detection: %s", exc)
             self._yolo = None
 
-    def detect(self, image: np.ndarray) -> DetectionResult:
+    def detect(self, image: np.ndarray) -> DetectionResult | None:
         if self._yolo is not None:
             result = self._detect_with_yolo(image)
             if result is not None:
@@ -56,30 +56,56 @@ class PageDetector:
         boxes = prediction[0].boxes
         best = boxes[boxes.conf.argmax().item()]
         x1, y1, x2, y2 = [int(v) for v in best.xyxy[0].tolist()]
+        h, w = image.shape[:2]
+        area_ratio = max(0.0, ((x2 - x1) * (y2 - y1)) / max(1.0, float(w * h)))
+        if area_ratio < 0.15:
+            return None
         quad = [(x1, y1), (x2, y1), (x2, y2), (x1, y2)]
         return DetectionResult(
             bbox_xyxy=(x1, y1, x2, y2),
             quadrilateral_xy=quad,
             method="yolov8",
             confidence=float(best.conf[0].item()),
+            area_ratio=float(area_ratio),
         )
 
-    def _detect_with_contours(self, image: np.ndarray) -> DetectionResult:
+    def _detect_with_contours(self, image: np.ndarray) -> DetectionResult | None:
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         blurred = cv2.GaussianBlur(gray, (5, 5), 0)
         edges = cv2.Canny(blurred, 50, 150)
         edges = cv2.dilate(edges, np.ones((3, 3), np.uint8), iterations=2)
         contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         if not contours:
-            h, w = gray.shape
-            return DetectionResult(
-                bbox_xyxy=(0, 0, w - 1, h - 1),
-                quadrilateral_xy=[(0, 0), (w - 1, 0), (w - 1, h - 1), (0, h - 1)],
-                method="full-frame",
-                confidence=0.1,
-            )
+            return None
 
-        contour = max(contours, key=cv2.contourArea)
+        image_area = float(gray.shape[0] * gray.shape[1])
+        sorted_contours = sorted(contours, key=cv2.contourArea, reverse=True)[:8]
+        best_contour = None
+        best_score = -1.0
+        best_area_ratio = 0.0
+        for contour in sorted_contours:
+            area_ratio = float(cv2.contourArea(contour)) / max(1.0, image_area)
+            if area_ratio < 0.2:
+                continue
+            rect = cv2.minAreaRect(contour)
+            rw, rh = rect[1]
+            if min(rw, rh) <= 1:
+                continue
+            aspect = max(rw, rh) / min(rw, rh)
+            if not 1.05 <= aspect <= 2.1:
+                continue
+            aspect_penalty = abs(aspect - 1.41) * 0.15
+            score = area_ratio - aspect_penalty
+            if score > best_score:
+                best_score = score
+                best_contour = contour
+                best_area_ratio = area_ratio
+
+        if best_contour is None:
+            return None
+
+        contour = best_contour
+        area_ratio = best_area_ratio
         perimeter = cv2.arcLength(contour, True)
         approx = cv2.approxPolyDP(contour, 0.02 * perimeter, True)
 
@@ -101,6 +127,6 @@ class PageDetector:
             bbox_xyxy=(x1, y1, x2, y2),
             quadrilateral_xy=[tuple(map(int, p)) for p in quad.tolist()],
             method="contour-fallback",
-            confidence=0.6,
+            confidence=float(min(0.95, 0.35 + area_ratio)),
+            area_ratio=float(area_ratio),
         )
-

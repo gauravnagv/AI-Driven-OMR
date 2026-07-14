@@ -31,6 +31,8 @@ def test_document_pipeline_end_to_end(tmp_path: Path) -> None:
         "questions": [
             {
                 "question_id": "q1",
+                "section_id": "sec_a",
+                "section_title": "Section A",
                 "marks": 1,
                 "negative_marks": 0.25,
                 "choices": [
@@ -53,6 +55,8 @@ def test_document_pipeline_end_to_end(tmp_path: Path) -> None:
     )
 
     assert result.success
+    assert result.sheet_present
     assert result.omr is not None
     assert result.omr.responses[0].selected == "D"
     assert result.omr.score.correct == 1
+    assert len(result.processing_steps) >= 4

@@ -25,6 +25,8 @@ def test_extract_single_mark_and_score() -> None:
         questions=[
             QuestionTemplate(
                 question_id="q1",
+                section_id="math",
+                section_title="Mathematics",
                 choices=[
                     BubbleChoice(label="A", x=200, y=150, radius=20),
                     BubbleChoice(label="B", x=260, y=150, radius=20),
@@ -39,6 +41,11 @@ def test_extract_single_mark_and_score() -> None:
     result = extractor.extract(image, template, answer_key={"q1": "A"})
 
     assert result.responses[0].selected == "A"
+    assert result.responses[0].section_id == "math"
     assert result.responses[0].status == "single"
     assert result.score.correct == 1
     assert result.score.obtained == 1.0
+    assert result.sections[0].section_title == "Mathematics"
+    assert result.sections[0].correct == 1
+    assert result.quality is not None
+    assert result.quality.estimated_accuracy_percent > 0

@@ -14,3 +14,15 @@ If the model is absent or `ultralytics` is not installed, the system automatical
 
 Use YAML schema shown in `config/template.example.yaml`. Coordinates are relative to the dewarped page dimensions (`page_width`, `page_height`).
 
+Template supports section-level evaluation:
+- `section_id`
+- `section_title`
+
+## Accuracy and Quality
+
+The UI/API now exposes `omr.quality.estimated_accuracy_percent` as a scan-confidence estimate computed from:
+- detection confidence
+- average bubble confidence
+- selection margin stability
+
+This is an operational confidence metric for live scans, not a benchmark/test-set accuracy claim.

@@ -15,6 +15,8 @@ class BubbleChoice(BaseModel):
 
 class QuestionTemplate(BaseModel):
     question_id: str
+    section_id: str = "default"
+    section_title: str = "General"
     marks: float = 1.0
     negative_marks: float = 0.0
     choices: list[BubbleChoice]
@@ -30,4 +32,3 @@ class OMRTemplate(BaseModel):
 def load_template(path: str | Path) -> OMRTemplate:
     raw = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
     return OMRTemplate.model_validate(raw)
-

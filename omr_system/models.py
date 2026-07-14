@@ -9,13 +9,32 @@ class DetectionResult(BaseModel):
     quadrilateral_xy: list[tuple[int, int]]
     method: str
     confidence: float
+    area_ratio: float = 0.0
+
+
+class ProcessingStep(BaseModel):
+    name: str
+    status: Literal["success", "failed", "skipped"]
+    detail: str
+    artifact_path: str | None = None
+
+
+class PresenceCheckResponse(BaseModel):
+    present: bool
+    confidence: float
+    reason: str
+    detection: DetectionResult | None = None
 
 
 class QuestionResponse(BaseModel):
     question_id: str
+    section_id: str = "default"
     selected: str | None
+    expected: str | None = None
+    is_correct: bool | None = None
     status: Literal["single", "multiple", "blank"]
     confidence: float = 0.0
+    selection_margin: float = 0.0
     options_fill_ratio: dict[str, float] = Field(default_factory=dict)
 
 
@@ -27,17 +46,42 @@ class OMRScore(BaseModel):
     blank: int
 
 
+class SectionScore(BaseModel):
+    section_id: str
+    section_title: str
+    obtained: float
+    maximum: float
+    correct: int
+    incorrect: int
+    blank: int
+    total_questions: int
+
+
+class QualityMetrics(BaseModel):
+    detection_confidence: float
+    average_question_confidence: float
+    average_selection_margin: float
+    estimated_accuracy_percent: float
+    recommendation: str
+
+
 class OMRResult(BaseModel):
     responses: list[QuestionResponse]
     score: OMRScore
+    sections: list[SectionScore] = Field(default_factory=list)
+    summary: str = ""
+    quality: QualityMetrics | None = None
     answer_key_used: bool
 
 
 class DocumentResult(BaseModel):
     input_path: str
     success: bool
+    sheet_present: bool = False
     detection: DetectionResult | None = None
     omr: OMRResult | None = None
+    processing_steps: list[ProcessingStep] = Field(default_factory=list)
+    human_readable_summary: str | None = None
     artifacts: dict[str, str] = Field(default_factory=dict)
     error: str | None = None
 
@@ -86,4 +130,3 @@ class WorkerClaim(BaseModel):
 
 
 JSONDict = dict[str, Any]
-
